@@ -1,0 +1,22 @@
+# Simple Frontend Dockerfile for Aureus ERP (Testing & Training)
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package management files
+COPY package.json package-lock.json ./
+
+# Install Node.js dependencies
+RUN npm ci --silent || npm install
+
+# Copy source code required for Vite asset bundle compilation
+COPY vite.config.js postcss.config.js tailwind.config.js ./
+COPY resources/ ./resources/
+COPY plugins/ ./plugins/
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Run Vite dev server bound to all network interfaces for container access
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,0 +1,48 @@
+# Simple Backend Dockerfile for Aureus ERP (Testing & Training)
+FROM php:8.3-alpine
+
+# Install system dependencies and PHP extensions required by Laravel 13 & FilamentPHP
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    unzip \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
+    icu-dev \
+    sqlite-dev \
+    oniguruma-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql pdo_sqlite gd zip intl bcmath opcache pcntl
+
+# Install Composer from official Composer image
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy composer dependency files
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies without running post-install scripts (scripts will run after copy)
+RUN composer install --no-interaction --prefer-dist --no-scripts
+
+# Copy full application source code (app, database, plugins, routes, config)
+COPY . .
+
+# Complete composer setup
+RUN composer dump-autoload --optimize
+
+# Copy environment file if .env doesn't exist
+RUN test -f .env || cp .env.example .env
+
+# Generate application key
+RUN php artisan key:generate
+
+# Expose Laravel Artisan server port
+EXPOSE 8000
+
+# Start Laravel built-in development server
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
